@@ -108,6 +108,8 @@ public interface HandleDbRequests {
 
   List<TopicRequest> getTopicRequests(String topicName, String envId, String status, int tenantId);
 
+  boolean existTopicRequests(String topicName, String envId, String status, int tenantId);
+
   List<KafkaConnectorRequest> getConnectorRequests(
       String connectorName, String envId, String status, int tenantId);
 

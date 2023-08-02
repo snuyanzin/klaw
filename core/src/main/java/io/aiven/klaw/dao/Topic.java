@@ -8,6 +8,7 @@ import jakarta.persistence.Table;
 import jakarta.persistence.Transient;
 import java.io.Serializable;
 import java.util.List;
+import java.util.Objects;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.ToString;
@@ -64,4 +65,20 @@ public class Topic implements Serializable {
   private String jsonParams;
 
   @Transient private boolean isExistingTopic;
+
+  @Override
+  public boolean equals(Object o) {
+    if (this == o) return true;
+    if (!(o instanceof Topic topic)) return false;
+
+    if (!Objects.equals(topicid, topic.topicid)) return false;
+    return Objects.equals(tenantId, topic.tenantId);
+  }
+
+  @Override
+  public int hashCode() {
+    int result = topicid != null ? topicid.hashCode() : 0;
+    result = 31 * result + (tenantId != null ? tenantId.hashCode() : 0);
+    return result;
+  }
 }
