@@ -310,7 +310,7 @@ public class TopicControllerService {
     int tenantId = commonUtilsService.getTenantId(userName);
 
     if (dbHandle.existTopicRequests(topicName, envId, RequestStatus.CREATED.value, tenantId)) {
-      
+
       return ApiResponse.builder().success(false).message(TOPICS_ERR_107).build();
     }
 
