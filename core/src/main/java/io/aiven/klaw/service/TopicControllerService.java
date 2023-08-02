@@ -229,9 +229,7 @@ public class TopicControllerService {
     HandleDbRequests dbHandle = manageDatabase.getHandleDbRequests();
 
     // check if already a delete topic request exists
-    if (!dbHandle
-        .getTopicRequests(topicName, envId, RequestStatus.CREATED.value, tenantId)
-        .isEmpty()) {
+    if (dbHandle.existTopicRequests(topicName, envId, RequestStatus.CREATED.value, tenantId)) {
       return ApiResponse.builder().success(false).message(TOPICS_ERR_103).build();
     }
 
@@ -311,9 +309,7 @@ public class TopicControllerService {
     TopicRequest topicRequestReq = new TopicRequest();
     int tenantId = commonUtilsService.getTenantId(userName);
 
-    if (!dbHandle
-        .getTopicRequests(topicName, envId, RequestStatus.CREATED.value, tenantId)
-        .isEmpty()) {
+    if (dbHandle.existTopicRequests(topicName, envId, RequestStatus.CREATED.value, tenantId)) {
       return ApiResponse.builder().success(false).message(TOPICS_ERR_107).build();
     }
 
@@ -1402,6 +1398,16 @@ public class TopicControllerService {
     return manageDatabase
         .getHandleDbRequests()
         .getTopicRequests(
+            topicRequestModel.getTopicname(),
+            topicRequestModel.getEnvironment(),
+            RequestStatus.CREATED.value,
+            tenantId);
+  }
+
+  public boolean existTopicRequests(TopicRequestModel topicRequestModel, int tenantId) {
+    return manageDatabase
+        .getHandleDbRequests()
+        .existTopicRequests(
             topicRequestModel.getTopicname(),
             topicRequestModel.getEnvironment(),
             RequestStatus.CREATED.value,

@@ -1049,12 +1049,7 @@ public class SelectDataJdbc {
   }
 
   public Team selectTeamDetailsFromName(String teamName, int tenantId) {
-    List<Team> teamList = teamRepo.findAllByTenantIdAndTeamname(tenantId, teamName);
-    if (!teamList.isEmpty()) {
-      return teamList.get(0);
-    } else {
-      return null;
-    }
+    return teamRepo.findFirstByTenantIdAndTeamnameOrderByTenantId(tenantId, teamName);
   }
 
   public List<Map<String, String>> selectActivityLogByTeam(
@@ -1369,6 +1364,11 @@ public class SelectDataJdbc {
   public List<TopicRequest> selectTopicRequests(
       String topicName, String envId, String status, int tenantId) {
     return topicRequestsRepo.findAllByRequestStatusAndTopicnameAndEnvironmentAndTenantId(
+        status, topicName, envId, tenantId);
+  }
+
+  public boolean existTopicRequests(String topicName, String envId, String status, int tenantId) {
+    return topicRequestsRepo.existsTopicRequestByRequestStatusAndTopicnameAndEnvironmentAndTenantId(
         status, topicName, envId, tenantId);
   }
 
