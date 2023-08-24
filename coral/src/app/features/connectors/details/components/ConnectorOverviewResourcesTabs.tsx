@@ -56,7 +56,7 @@ function ConnectorOverviewResourcesTabs({
     },
     {
       connectorOverviewTabEnum: ConnectorOverviewTabEnum.DOCUMENTATION,
-      title: "Documentation",
+      title: "Readme",
     },
     {
       connectorOverviewTabEnum: ConnectorOverviewTabEnum.HISTORY,
@@ -71,7 +71,7 @@ function ConnectorOverviewResourcesTabs({
   function renderTabContent() {
     if (isError) {
       return (
-        <Box marginBottom={"l1"} marginTop={"l2"} role="alert">
+        <Box marginBottom={"l1"} marginTop={"l2"}>
           <Alert type="error">
             There was an error trying to load the connector details:{" "}
             {parseErrorMsg(error)}.
@@ -93,7 +93,7 @@ function ConnectorOverviewResourcesTabs({
 
     if (!connectorOverview?.connectorExists) {
       return (
-        <Box marginBottom={"l1"} marginTop={"l2"} role="alert">
+        <Box marginBottom={"l1"} marginTop={"l2"}>
           <Alert type="warning">
             Connector {connectorName} does not exist.
           </Alert>
@@ -115,7 +115,7 @@ function ConnectorOverviewResourcesTabs({
     );
   }
 
-  const ConnectorTabs = () => (
+  return (
     <Tabs
       value={currentTab}
       onChange={(resourceTypeId) => navigateToTab(navigate, resourceTypeId)}
@@ -141,8 +141,6 @@ function ConnectorOverviewResourcesTabs({
       })}
     </Tabs>
   );
-
-  return <ConnectorTabs />;
 }
 
 export { ConnectorOverviewResourcesTabs };

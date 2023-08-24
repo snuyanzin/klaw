@@ -28,24 +28,24 @@ public interface SchemaRequestRepo
       nativeQuery = true)
   Integer getNextSchemaRequestId(@Param("tenantId") Integer tenantId);
 
-  @Query(
-      value = "select count(*) from kwschemarequests where env = :envId and tenantid = :tenantId",
-      nativeQuery = true)
-  List<Object[]> findAllSchemaRequestsCountForEnv(
+  boolean existsSchemaRequestByEnvironmentAndTenantId(
       @Param("envId") String envId, @Param("tenantId") Integer tenantId);
+
+  boolean existsSchemaRequestByEnvironmentAndTenantIdAndRequestStatus(
+      String envId, Integer tenantId, String requestStatus);
 
   @Query(
       value =
-          "select count(*) from kwschemarequests where teamid = :teamId and tenantid = :tenantId and topicstatus='created'",
+          "select exists(select 1 from kwschemarequests where teamid = :teamId and tenantid = :tenantId and topicstatus='created')",
       nativeQuery = true)
-  List<Object[]> findAllRecordsCountForTeamId(
+  boolean existsRecordsCountForTeamId(
       @Param("teamId") Integer teamId, @Param("tenantId") Integer tenantId);
 
   @Query(
       value =
-          "select count(*) from kwschemarequests where (requestor = :userId) and tenantid = :tenantId and topicstatus='created'",
+          "select exists(select 1 from kwschemarequests where (requestor = :userId) and tenantid = :tenantId and topicstatus='created')",
       nativeQuery = true)
-  List<Object[]> findAllRecordsCountForUserId(
+  boolean existsRecordsCountForUserId(
       @Param("userId") String userId, @Param("tenantId") Integer tenantId);
 
   List<SchemaRequest> findAllByTenantId(int tenantId);
@@ -77,4 +77,6 @@ public interface SchemaRequestRepo
       @Param("tenantId") Integer tenantId,
       @Param("requestor") String requestor,
       @Param("topicStatus") String topicStatus);
+
+  void deleteByTenantId(int tenantId);
 }

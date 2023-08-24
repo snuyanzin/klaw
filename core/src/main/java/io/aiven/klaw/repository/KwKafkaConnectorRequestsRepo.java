@@ -2,6 +2,7 @@ package io.aiven.klaw.repository;
 
 import io.aiven.klaw.dao.KafkaConnectorRequest;
 import io.aiven.klaw.dao.KafkaConnectorRequestID;
+import io.aiven.klaw.model.enums.RequestStatus;
 import java.util.List;
 import java.util.Optional;
 import org.springframework.data.jpa.repository.Query;
@@ -29,12 +30,16 @@ public interface KwKafkaConnectorRequestsRepo
 
   List<KafkaConnectorRequest> findAllByTenantId(int tenantId);
 
-  @Query(
-      value =
-          "select count(*) from kwkafkaconnectorrequests where env = :envId and tenantid = :tenantId and connectorstatus='created'",
-      nativeQuery = true)
-  List<Object[]> findAllConnectorRequestsCountForEnv(
-      @Param("envId") String envId, @Param("tenantId") Integer tenantId);
+  default boolean existsConnectorRequestsForEnvTenantIdAndCreatedStatus(
+      String envId, Integer tenantId) {
+    return existsByEnvironmentAndTenantIdAndRequestStatus(
+        envId, tenantId, RequestStatus.CREATED.value);
+  }
+
+  boolean existsByEnvironmentAndTenantIdAndRequestStatus(
+      @Param("envId") String envId,
+      @Param("tenantId") Integer tenantId,
+      @Param("requestStatus") String requestStatus);
 
   @Query(
       value = "select max(connectorid) from kwkafkaconnectorrequests where tenantid = :tenantId",
@@ -43,16 +48,16 @@ public interface KwKafkaConnectorRequestsRepo
 
   @Query(
       value =
-          "select count(*) from kwkafkaconnectorrequests where teamid = :teamId and tenantid = :tenantId and connectorstatus='created'",
+          "select exists(select 1 from kwkafkaconnectorrequests where teamid = :teamId and tenantid = :tenantId and connectorstatus='created')",
       nativeQuery = true)
-  List<Object[]> findAllRecordsCountForTeamId(
+  boolean existsRecordsCountForTeamId(
       @Param("teamId") Integer teamId, @Param("tenantId") Integer tenantId);
 
   @Query(
       value =
-          "select count(*) from kwkafkaconnectorrequests where (requestor = :userId) and tenantid = :tenantId and connectorstatus='created'",
+          "select exists(select 1 from kwkafkaconnectorrequests where (requestor = :userId) and tenantid = :tenantId and connectorstatus='created')",
       nativeQuery = true)
-  List<Object[]> findAllRecordsCountForUserId(
+  boolean existsRecordsCountForUserId(
       @Param("userId") String userId, @Param("tenantId") Integer tenantId);
 
   @Query(
@@ -74,11 +79,14 @@ public interface KwKafkaConnectorRequestsRepo
   @Query(
       value =
           "select count(*) from kwkafkaconnectorrequests where tenantid = :tenantId"
-              + " and (teamid = :teamId or approvingteamid = :teamId) and requestor != :requestor and connectorstatus = :connectorStatus group by connectorstatus",
+              + " and (teamid = :teamId or approvingteamid = :approvingTeamid) and requestor != :requestor and connectorstatus = :connectorStatus group by connectorstatus",
       nativeQuery = true)
   Long countRequestorsConnectorRequestsGroupByStatusType(
       @Param("teamId") Integer teamId,
+      @Param("approvingTeamid") String approvingTeamid,
       @Param("tenantId") Integer tenantId,
       @Param("requestor") String requestor,
       @Param("connectorStatus") String connectorStatus);
+
+  void deleteByTenantId(int tenantId);
 }

@@ -32,8 +32,8 @@ const testMapTabs = [
     title: "Schema",
   },
   {
-    linkTo: "documentation",
-    title: "Documentation",
+    linkTo: "readme",
+    title: "Readme",
   },
   {
     linkTo: "history",
@@ -52,6 +52,7 @@ const testTopicOverview: TopicOverview = {
   schemaExists: false,
   prefixAclsExists: false,
   txnAclsExists: false,
+  createSchemaAllowed: false,
   topicInfo: {
     topicName: testTopicName,
     noOfPartitions: 1,

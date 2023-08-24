@@ -26,7 +26,7 @@ import {
   ConnectorRequestFormSchema,
   connectorRequestFormSchema,
 } from "src/app/features/connectors/request/schemas/connector-request-form";
-import { createConnectorRequest } from "src/domain/connector";
+import { requestConnectorCreation } from "src/domain/connector";
 import {
   Environment,
   getAllEnvironmentsForConnector,
@@ -51,7 +51,7 @@ function ConnectorRequest() {
     queryFn: () => getAllEnvironmentsForConnector(),
   });
 
-  const connectorRequestMutation = useMutation(createConnectorRequest, {
+  const connectorRequestMutation = useMutation(requestConnectorCreation, {
     onSuccess: () => {
       navigate("/requests/connectors?status=CREATED");
       toast({
@@ -75,7 +75,7 @@ function ConnectorRequest() {
     <>
       <Box>
         {connectorRequestMutation.isError && (
-          <Box marginBottom={"l1"} role="alert">
+          <Box marginBottom={"l1"}>
             <Alert type="error">
               {parseErrorMsg(connectorRequestMutation.error)}
             </Alert>
@@ -181,6 +181,7 @@ function ConnectorRequest() {
             <Textarea<ConnectorRequestFormSchema>
               name={"remarks"}
               labelText={"Message for approval"}
+              placeholder="Comments about this request for the approver."
             />
           </Grid>
 

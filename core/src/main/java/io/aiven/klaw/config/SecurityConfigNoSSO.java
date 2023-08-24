@@ -75,7 +75,7 @@ public class SecurityConfigNoSSO {
     http.csrf()
         .disable()
         .authorizeHttpRequests()
-        .requestMatchers(ConfigUtils.getStaticResources(coralEnabled).toArray(new String[0]))
+        .requestMatchers(ConfigUtils.getStaticResources(coralEnabled))
         .permitAll()
         .anyRequest()
         .fullyAuthenticated()
@@ -162,8 +162,8 @@ public class SecurityConfigNoSSO {
       userInfo = iter.next();
       try {
         String secPwd = userInfo.getPwd();
-        if (secPwd != null && secPwd.equals("")) {
-          secPwd = "gfGF%64GFDd766hfgfHFD$%#453";
+        if (secPwd == null || secPwd.equals("")) {
+          continue;
         } else {
           secPwd = decodePwd(secPwd);
         }

@@ -31,7 +31,7 @@ import { getAllEnvironmentsForTopicAndAcl } from "src/domain/environment/environ
 import {
   TopicDetailsPerEnv,
   getTopicDetailsPerEnv,
-  promoteTopic,
+  requestTopicPromotion,
 } from "src/domain/topic";
 import { HTTPError } from "src/services/api";
 import { parseErrorMsg } from "src/services/mutation-utils";
@@ -150,7 +150,7 @@ function TopicPromotionRequest() {
     isLoading: promoteIsLoading,
     isError: promoteIsError,
     error: promoteError,
-  } = useMutation(promoteTopic, {
+  } = useMutation(requestTopicPromotion, {
     onSuccess: () => {
       navigate(-1);
       toast({
@@ -187,7 +187,7 @@ function TopicPromotionRequest() {
         </Dialog>
       )}
       {promoteIsError && (
-        <Box marginBottom={"l1"} role="alert">
+        <Box marginBottom={"l1"}>
           <Alert type="error">{parseErrorMsg(promoteError)}</Alert>
         </Box>
       )}
@@ -271,6 +271,7 @@ function TopicPromotionRequest() {
             <Textarea<Schema>
               name="remarks"
               labelText="Message for approval"
+              placeholder="Comments about this request for the approver."
               rows={5}
             />
           </Box>

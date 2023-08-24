@@ -28,7 +28,7 @@ import StatsDisplay from "src/app/features/topics/details/components/StatsDispla
 import { TopicSubscriptionsTable } from "src/app/features/topics/details/subscriptions/TopicSubscriptionsTable";
 import TopicSubscriptionsDetailsModal from "src/app/features/topics/details/subscriptions/components/TopicSubscriptionsDetailsModal";
 import { getTopicStats } from "src/app/features/topics/details/utils";
-import { createAclDeletionRequest } from "src/domain/acl/acl-api";
+import { requestAclDeletion } from "src/domain/acl/acl-api";
 import { AclOverviewInfo } from "src/domain/topic/topic-types";
 import { parseErrorMsg } from "src/services/mutation-utils";
 
@@ -66,7 +66,7 @@ const TopicSubscriptions = () => {
   const { teamId, aclType, search } = useFiltersContext();
 
   const { isLoading: deleteIsLoading, mutate: deleteRequest } = useMutation({
-    mutationFn: createAclDeletionRequest,
+    mutationFn: requestAclDeletion,
     onSuccess: () => {
       setErrorMessage("");
       setDeleteModal({ isOpen: false, req_no: null });
@@ -191,7 +191,7 @@ const TopicSubscriptions = () => {
         }}
       />
       {errorMessage !== "" && (
-        <Box role="alert" marginBottom={"l2"}>
+        <Box marginBottom={"l2"}>
           <Alert type="error">{errorMessage}</Alert>
         </Box>
       )}
@@ -239,6 +239,9 @@ const TopicSubscriptions = () => {
               }
             }}
             value={selectedSubs}
+            ariaLabel={
+              "Switch between user subscriptions, prefixed subscriptions and transactional subscriptions"
+            }
           >
             <SegmentedControl name="User subscriptions" value="aclInfoList">
               User subs.

@@ -23,9 +23,12 @@ function TopicMessageOffsetFilter({
     <RadioButtonGroup
       name={"offset"}
       value={value}
-      labelText="Offset"
+      labelText="Number of messages"
       disabled={disabled}
       onChange={(value) => onChange(value as Offset)}
+      description={
+        "Choose how many recent messages you want to view from this topic."
+      }
     >
       {offsets.map((offset) => (
         <RadioButton key={offset} value={offset}>

@@ -19,7 +19,7 @@ import {
   Environment,
   getEnvironmentsForSchemaRequest,
 } from "src/domain/environment";
-import { createSchemaRequest } from "src/domain/schema-request";
+import { requestSchemaCreation } from "src/domain/schema-request";
 import { TopicNames, getTopicNames } from "src/domain/topic";
 import { parseErrorMsg } from "src/services/mutation-utils";
 
@@ -108,7 +108,7 @@ function TopicSchemaRequest(props: TopicSchemaRequestProps) {
     },
   });
 
-  const schemaRequestMutation = useMutation(createSchemaRequest, {
+  const schemaRequestMutation = useMutation(requestSchemaCreation, {
     onSuccess: () => {
       navigate("/requests/schemas?status=CREATED");
       toast({
@@ -143,7 +143,7 @@ function TopicSchemaRequest(props: TopicSchemaRequestProps) {
       )}
       <Box>
         {schemaRequestMutation.isError && (
-          <Box marginBottom={"l1"} role="alert">
+          <Box marginBottom={"l1"}>
             <Alert type="error">
               {parseErrorMsg(schemaRequestMutation.error)}
             </Alert>
@@ -205,7 +205,8 @@ function TopicSchemaRequest(props: TopicSchemaRequestProps) {
           />
           <Textarea
             name={"remarks"}
-            labelText={"Enter a message for approval"}
+            labelText={"Message for approval"}
+            placeholder="Comments about this request for the approver."
           />
           <Box display={"flex"} colGap={"l1"} marginTop={"3"}>
             <SubmitButton>Submit request</SubmitButton>

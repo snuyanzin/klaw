@@ -25,16 +25,14 @@ public interface MessageSchemaRepo extends CrudRepository<MessageSchema, Message
   List<MessageSchema> findAllByTenantIdAndTopicnameAndSchemaversionAndEnvironment(
       int tenantId, String topicName, String schemaVersion, String environmentId);
 
-  @Query(
-      value = "select count(*) from kwavroschemas where env = :envId and tenantid = :tenantId",
-      nativeQuery = true)
-  List<Object[]> findAllSchemaCountForEnv(
+  boolean existsMessageSchemaByEnvironmentAndTenantId(
       @Param("envId") String envId, @Param("tenantId") Integer tenantId);
 
   @Query(
-      value = "select count(*) from kwavroschemas where teamid = :teamId and tenantid = :tenantId",
+      value =
+          "select exists(select 1 from kwavroschemas where teamid = :teamId and tenantid = :tenantId)",
       nativeQuery = true)
-  List<Object[]> findAllRecordsCountForTeamId(
+  boolean existsRecordsCountForTeamId(
       @Param("teamId") Integer teamId, @Param("tenantId") Integer tenantId);
 
   @Query(
@@ -48,4 +46,9 @@ public interface MessageSchemaRepo extends CrudRepository<MessageSchema, Message
       nativeQuery = true)
   List<Object[]> findTopicAndVersionsForEnvAndTenantId(
       @Param("envId") String envId, @Param("tenantId") Integer tenantId);
+
+  void deleteByTenantId(int tenantId);
+
+  void deleteByTenantIdAndTopicnameAndEnvironment(
+      int tenantId, String topicName, String environmentId);
 }

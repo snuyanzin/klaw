@@ -15,6 +15,7 @@ import static org.springframework.beans.BeanUtils.copyProperties;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.aiven.klaw.config.ManageDatabase;
+import io.aiven.klaw.dao.CRUDResponse;
 import io.aiven.klaw.dao.Env;
 import io.aiven.klaw.dao.KwClusters;
 import io.aiven.klaw.dao.Team;
@@ -25,12 +26,14 @@ import io.aiven.klaw.helpers.HandleDbRequests;
 import io.aiven.klaw.helpers.KlawResourceUtils;
 import io.aiven.klaw.helpers.UtilMethods;
 import io.aiven.klaw.model.ApiResponse;
+import io.aiven.klaw.model.KwMetadataUpdates;
 import io.aiven.klaw.model.SyncBackTopics;
 import io.aiven.klaw.model.SyncTopicUpdates;
 import io.aiven.klaw.model.SyncTopicsBulk;
 import io.aiven.klaw.model.TopicInfo;
 import io.aiven.klaw.model.enums.AclType;
 import io.aiven.klaw.model.enums.ApiResultStatus;
+import io.aiven.klaw.model.enums.EntityType;
 import io.aiven.klaw.model.enums.KafkaClustersType;
 import io.aiven.klaw.model.enums.PermissionType;
 import io.aiven.klaw.model.enums.RequestOperationType;
@@ -521,10 +524,7 @@ public class TopicSyncControllerService {
     logArray.add("Type of Sync " + syncBackTopics.getTypeOfSync());
 
     if (commonUtilsService.isNotAuthorizedUser(getPrincipal(), PermissionType.SYNC_BACK_TOPICS)) {
-      return ApiResponse.builder()
-          .success(false)
-          .message(ApiResultStatus.NOT_AUTHORIZED.value)
-          .build();
+      return ApiResponse.NOT_AUTHORIZED;
     }
 
     List<String> resultStatus = new ArrayList<>();
@@ -595,8 +595,9 @@ public class TopicSyncControllerService {
         }
       } else {
         logUpdateSyncBackTopics.add("Topic created " + topicFound.getTopicname());
-        if (!Objects.equals(syncBackTopics.getSourceEnv(), syncBackTopics.getTargetEnv()))
+        if (!Objects.equals(syncBackTopics.getSourceEnv(), syncBackTopics.getTargetEnv())) {
           createAndApproveTopicRequest(syncBackTopics, topicFound, tenantId);
+        }
       }
     } catch (KlawException e) {
       log.error("Error in creating topic {}", topicFound, e);
@@ -626,12 +627,29 @@ public class TopicSyncControllerService {
       // Create request
       Map<String, String> createResult =
           manageDatabase.getHandleDbRequests().requestForTopic(topicRequest);
+      // TODO performance improvement batch save these requests to the DB.
       // Approve request
       if (createResult.get("topicId") != null) {
         topicRequest.setTopicid(Integer.parseInt(createResult.get("topicId")));
-        manageDatabase.getHandleDbRequests().updateTopicRequest(topicRequest, getUserName());
+        CRUDResponse<Topic> saveResults =
+            manageDatabase.getHandleDbRequests().updateTopicRequest(topicRequest, getUserName());
+        // entities size should always be equal to 1 as they are saved one at a time here.
+        if (saveResults.getResultStatus().equals(ApiResultStatus.SUCCESS.value)
+            && saveResults.getEntities().size() > 1) {
+          manageDatabase.addTopicToCache(tenantId, saveResults.getEntities().get(0));
+        }
       }
     }
+    // Single reset on other servers.
+    // Later this should be updated to send particular object across instead of having the cache
+    // reloaded on the other side.
+
+    commonUtilsService.resetCacheOnOtherServers(
+        KwMetadataUpdates.builder()
+            .tenantId(tenantId)
+            .entityType(EntityType.TOPICS.name())
+            .operationType(RequestOperationType.CREATE.value)
+            .build());
   }
 
   public List<TopicInfo> getTopicsRowView(
@@ -825,10 +843,7 @@ public class TopicSyncControllerService {
     logArray.add("Type of Sync " + syncTopicsBulk.getTypeOfSync());
 
     if (commonUtilsService.isNotAuthorizedUser(getPrincipal(), PermissionType.SYNC_TOPICS)) {
-      return ApiResponse.builder()
-          .success(false)
-          .message(ApiResultStatus.NOT_AUTHORIZED.value)
-          .build();
+      return ApiResponse.NOT_AUTHORIZED;
     }
 
     if ("SELECTED_TOPICS".equals(syncTopicsBulk.getTypeOfSync())) {
@@ -959,10 +974,7 @@ public class TopicSyncControllerService {
     String userDetails = getUserName();
 
     if (commonUtilsService.isNotAuthorizedUser(getPrincipal(), PermissionType.SYNC_TOPICS)) {
-      return ApiResponse.builder()
-          .success(false)
-          .message(ApiResultStatus.NOT_AUTHORIZED.value)
-          .build();
+      return ApiResponse.NOT_AUTHORIZED;
     }
 
     // tenant filtering
@@ -999,10 +1011,7 @@ public class TopicSyncControllerService {
         if (!commonUtilsService
             .getEnvsFromUserId(userDetails)
             .contains(topicUpdate.getEnvSelected())) {
-          return ApiResponse.builder()
-              .success(false)
-              .message(ApiResultStatus.NOT_AUTHORIZED.value)
-              .build();
+          return ApiResponse.NOT_AUTHORIZED;
         }
         existingTopics = getTopicFromName(topicUpdate.getTopicName(), tenantId);
 
@@ -1101,34 +1110,32 @@ public class TopicSyncControllerService {
 
     if (updatedSyncTopics.size() == 0 && updatedSyncTopicsDelete.size() > 0) {
       manageDatabase.loadTopicsForOneTenant(tenantId);
-      return ApiResponse.builder().success(true).message(ApiResultStatus.SUCCESS.value).build();
+      return ApiResponse.SUCCESS;
     }
 
     if (topicsDontExistInMainCluster) {
-      return ApiResponse.builder()
-          .success(false)
-          .message(TOPICS_SYNC_ERR_103 + syncCluster + ". \n Topics : " + erroredTopicsExist)
-          .build();
+      return ApiResponse.notOk(
+          TOPICS_SYNC_ERR_103 + syncCluster + ". \n Topics : " + erroredTopicsExist);
     }
 
     if (topicsWithDiffTeams) {
-      return ApiResponse.builder()
-          .success(false)
-          .message(TOPICS_SYNC_ERR_104 + syncCluster + ". \n Topics : " + erroredTopics)
-          .build();
+      return ApiResponse.notOk(
+          TOPICS_SYNC_ERR_104 + syncCluster + ". \n Topics : " + erroredTopics);
     }
 
     if (listTopics.size() > 0) {
       try {
-        String statusSync = manageDatabase.getHandleDbRequests().addToSynctopics(listTopics);
+        CRUDResponse<Topic> statusSync =
+            manageDatabase.getHandleDbRequests().addToSynctopics(listTopics);
         manageDatabase.loadTopicsForOneTenant(tenantId);
-        return ApiResponse.builder().success(true).message(statusSync).build();
+
+        return ApiResponse.ok(statusSync.getResultStatus());
       } catch (Exception e) {
         log.error(e.getMessage());
         throw new KlawException(e.getMessage());
       }
     } else {
-      return ApiResponse.builder().success(false).message(SYNC_ERR_101).build();
+      return ApiResponse.notOk(SYNC_ERR_101);
     }
   }
 

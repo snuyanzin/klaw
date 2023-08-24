@@ -8,7 +8,6 @@ import {
   useOutletContext,
 } from "react-router-dom";
 import { EntityDetailsHeader } from "src/app/features/components/EntityDetailsHeader";
-import TopicClaimBanner from "src/app/features/topics/details/components/TopicClaimBanner";
 import { TopicClaimConfirmationModal } from "src/app/features/topics/details/components/TopicClaimConfirmationModal";
 import { TopicOverviewResourcesTabs } from "src/app/features/topics/details/components/TopicDetailsResourceTabs";
 import {
@@ -18,12 +17,13 @@ import {
 } from "src/app/router_utils";
 import { TopicOverview, TopicSchemaOverview } from "src/domain/topic";
 import {
-  claimTopic,
+  requestTopicClaim,
   getSchemaOfTopic,
   getTopicOverview,
 } from "src/domain/topic/topic-api";
 import { HTTPError } from "src/services/api";
 import { parseErrorMsg } from "src/services/mutation-utils";
+import { ClaimBanner } from "src/app/features/components/ClaimBanner";
 
 type TopicOverviewProps = {
   topicName: string;
@@ -98,7 +98,7 @@ function TopicDetails(props: TopicOverviewProps) {
     isError: createClaimTopicRequestIsError,
   } = useMutation(
     (remark?: string) =>
-      claimTopic({
+      requestTopicClaim({
         topicName: topicData?.topicInfo.topicName || "",
         env: topicData?.topicInfo.envId || "",
         remark,
@@ -147,10 +147,8 @@ function TopicDetails(props: TopicOverviewProps) {
         entity={{ name: topicName, type: "topic" }}
         entityExists={Boolean(topicData?.topicExists)}
         entityEditLink={`/topic/${topicName}/request-update?env=${topicData?.topicInfo.envId}`}
-        showEditButton={Boolean(
-          topicData?.topicInfo.showEditTopic &&
-            !topicData?.topicInfo.hasOpenTopicRequest
-        )}
+        showEditButton={Boolean(topicData?.topicInfo.showEditTopic)}
+        hasPendingRequest={Boolean(topicData?.topicInfo.hasOpenTopicRequest)}
         entityUpdating={topicIsRefetching}
         environments={topicData?.availableEnvironments}
         environmentId={environmentId}
@@ -159,11 +157,13 @@ function TopicDetails(props: TopicOverviewProps) {
       {topicData?.topicInfo !== undefined &&
         !topicData.topicInfo.topicOwner && (
           <Box marginBottom={"l1"}>
-            <TopicClaimBanner
-              topicName={topicName}
+            <ClaimBanner
+              entityType={"topic"}
+              entityName={topicName}
               hasOpenClaimRequest={topicData?.topicInfo.hasOpenClaimRequest}
+              entityOwner={topicData.topicInfo.teamname}
               hasOpenRequest={topicData?.topicInfo.hasOpenRequest}
-              setShowClaimModal={setShowClaimModal}
+              claimEntity={() => setShowClaimModal(true)}
               isError={createClaimTopicRequestIsError}
               errorMessage={claimErrorMessage}
             />

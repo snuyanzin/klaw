@@ -1,17 +1,33 @@
-import { Alert, Box, PageHeader, Skeleton, useToast } from "@aivenio/aquarium";
+import {
+  Alert,
+  Box,
+  PageHeader,
+  Skeleton,
+  Typography,
+  useToast,
+} from "@aivenio/aquarium";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { DocumentationEditor } from "src/app/components/documentation/DocumentationEditor";
 import { DocumentationView } from "src/app/components/documentation/DocumentationView";
 import { useConnectorDetails } from "src/app/features/connectors/details/ConnectorDetails";
-import { NoDocumentationBanner } from "src/app/features/connectors/details/documentation/components/NoDocumentationBanner";
 import {
   ConnectorDocumentationMarkdown,
   updateConnectorDocumentation,
 } from "src/domain/connector";
 import { isDocumentationTransformationError } from "src/domain/helper/documentation-helper";
 import { parseErrorMsg } from "src/services/mutation-utils";
+import { NoDocumentationBanner } from "src/app/features/components/documentation/components/NoDocumentationBanner";
 
+const readmeDescription = (connectorOwner: boolean) => {
+  const fixedText = `Readme provides essential information, guidelines, and explanations about the connector, helping team members understand its purpose and usage.`;
+  const additionalTextConnectorOwner = `Edit the readme to update the information as the connector evolves.`;
+  return (
+    <Box component={Typography.SmallText} marginBottom={"l2"}>
+      {fixedText} {connectorOwner ? additionalTextConnectorOwner : ""}
+    </Box>
+  );
+};
 function ConnectorDocumentation() {
   const queryClient = useQueryClient();
 
@@ -19,6 +35,10 @@ function ConnectorDocumentation() {
   const [saving, setSaving] = useState(false);
 
   const { connectorOverview, connectorIsRefetching } = useConnectorDetails();
+
+  const isUserConnectorOwner = Boolean(
+    connectorOverview.connectorInfo.connectorOwner
+  );
 
   const toast = useToast();
 
@@ -36,7 +56,7 @@ function ConnectorDocumentation() {
       onSuccess: () => {
         queryClient.refetchQueries(["connector-overview"]).then(() => {
           toast({
-            message: "Documentation successfully updated",
+            message: "Readme successfully updated",
             position: "bottom-left",
             variant: "default",
           });
@@ -50,27 +70,28 @@ function ConnectorDocumentation() {
     }
   );
 
-  if (connectorIsRefetching) {
+  if (isUserConnectorOwner && connectorIsRefetching) {
     return (
       <>
-        <PageHeader title={"Documentation"} />
+        <PageHeader title={"Readme"} />
         <Box paddingTop={"l2"}>
-          <div className={"visually-hidden"}>Loading documentation</div>
+          <div className={"visually-hidden"}>Loading readme</div>
           <Skeleton />
         </Box>
       </>
     );
   }
 
-  if (editMode) {
+  if (isUserConnectorOwner && editMode) {
     return (
       <>
-        <PageHeader title={"Edit documentation"} />
+        <PageHeader title={"Edit readme"} />
+        {readmeDescription(isUserConnectorOwner)}
         <>
           {isError && (
-            <Box marginBottom={"l1"} role="alert">
+            <Box marginBottom={"l1"}>
               <Alert type="error">
-                The documentation could not be saved, there was an error: <br />
+                The readme could not be saved, there was an error: <br />
                 {parseErrorMsg(error)}
               </Alert>
             </Box>
@@ -92,24 +113,27 @@ function ConnectorDocumentation() {
   ) {
     return (
       <>
-        <PageHeader title={"Documentation"} />
-        <NoDocumentationBanner addDocumentation={() => setEditMode(true)} />
+        <PageHeader title={"Readme"} />
+        <NoDocumentationBanner
+          addDocumentation={() => setEditMode(true)}
+          isUserOwner={connectorOverview.connectorInfo.connectorOwner}
+          entity={"connector"}
+        />
       </>
     );
   }
 
   if (
+    isUserConnectorOwner &&
     isDocumentationTransformationError(connectorOverview.connectorDocumentation)
   ) {
     return (
       <>
-        <PageHeader title={"Documentation"} />
-        <Box role="alert">
-          <Alert type="error">
-            Something went wrong while trying to transform the documentation
-            into the right format.
-          </Alert>
-        </Box>
+        <PageHeader title={"Readme"} />
+        <Alert type="error">
+          Something went wrong while trying to transform the readme into the
+          right format.
+        </Alert>
       </>
     );
   }
@@ -117,12 +141,17 @@ function ConnectorDocumentation() {
   return (
     <>
       <PageHeader
-        title={"Documentation"}
-        primaryAction={{
-          text: "Edit documentation",
-          onClick: () => setEditMode(true),
-        }}
+        title={"Readme"}
+        primaryAction={
+          isUserConnectorOwner
+            ? {
+                text: "Edit readme",
+                onClick: () => setEditMode(true),
+              }
+            : undefined
+        }
       />
+      {readmeDescription(isUserConnectorOwner)}
       <Box paddingTop={"l2"}>
         <DocumentationView
           markdownString={connectorOverview.connectorDocumentation}

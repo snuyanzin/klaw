@@ -6,20 +6,13 @@ import {
   tabThroughBackward,
   tabThroughForward,
 } from "src/services/test-utils/tabbing";
-import { AuthUser } from "src/domain/auth-user";
-
-const authUser: AuthUser = {
-  canSwitchTeams: "false",
-  teamId: "2",
-  teamname: "awesome-bunch-of-people",
-  username: "i-am-test-user",
-};
+import { testAuthUser } from "src/domain/auth-user/auth-user-test-helper";
 
 jest.mock("src/domain/team/team-api.ts");
 
 jest.mock("src/app/context-provider/AuthProvider", () => ({
   useAuthContext: () => {
-    return authUser;
+    return testAuthUser;
   },
 }));
 
@@ -39,12 +32,9 @@ const navLinks = [
   { name: "Approve requests", linkTo: "/approvals" },
   { name: "My team's requests", linkTo: "/requests" },
   { name: "Audit log", linkTo: "/activityLog" },
-  { name: "Settings", linkTo: "/serverConfig" },
 ];
 
-const submenuItems = [
-  { name: "Users and teams", links: ["Users", "Teams", "User requests"] },
-];
+const submenuItems = [{ name: "Users and teams", links: ["Users", "Teams"] }];
 
 const navOrderFirstLevel = [
   { name: "Dashboard", isSubmenu: false },
@@ -54,7 +44,6 @@ const navOrderFirstLevel = [
   { name: "Approve requests", isSubmenu: false },
   { name: "My team's requests", isSubmenu: false },
   { name: "Audit log", isSubmenu: false },
-  { name: "Settings", isSubmenu: false },
 ];
 
 describe("MainNavigation.tsx", () => {
@@ -75,7 +64,7 @@ describe("MainNavigation.tsx", () => {
 
     it("renders the user's current team", async () => {
       const teamLabel = screen.getByText("Team");
-      const teamName = screen.getByText(authUser.teamname);
+      const teamName = screen.getByText(testAuthUser.teamname);
       expect(teamLabel).toBeVisible();
       expect(teamName).toBeVisible();
     });

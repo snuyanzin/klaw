@@ -26,7 +26,7 @@ import type { Schema } from "src/app/features/topics/request/form-schemas/topic-
 import { Environment } from "src/domain/environment";
 import { getEnvironmentsForTopicRequest } from "src/domain/environment/environment-api";
 import AdvancedConfiguration from "src/app/features/topics/request/components/AdvancedConfiguration";
-import { requestTopic } from "src/domain/topic/topic-api";
+import { requestTopicCreation } from "src/domain/topic/topic-api";
 import { parseErrorMsg } from "src/services/mutation-utils";
 import { generateTopicNameDescription } from "src/app/features/topics/request/utils";
 import { Dialog } from "src/app/components/Dialog";
@@ -61,16 +61,19 @@ function TopicRequest() {
     defaultValues,
   });
 
-  const { mutate, isLoading, isError, error } = useMutation(requestTopic, {
-    onSuccess: () => {
-      navigate("/requests/topics?status=CREATED");
-      toast({
-        message: "Topic request successfully created",
-        position: "bottom-left",
-        variant: "default",
-      });
-    },
-  });
+  const { mutate, isLoading, isError, error } = useMutation(
+    requestTopicCreation,
+    {
+      onSuccess: () => {
+        navigate("/requests/topics?status=CREATED");
+        toast({
+          message: "Topic request successfully created",
+          position: "bottom-left",
+          variant: "default",
+        });
+      },
+    }
+  );
 
   const onSubmit: SubmitHandler<Schema> = (data) => mutate(data);
 
@@ -104,7 +107,7 @@ function TopicRequest() {
       )}
       <Box>
         {isError && (
-          <Box marginBottom={"l1"} role="alert">
+          <Box marginBottom={"l1"}>
             <Alert type="error">{parseErrorMsg(error)}</Alert>
           </Box>
         )}
@@ -185,6 +188,7 @@ function TopicRequest() {
                 <Textarea<Schema>
                   name="remarks"
                   labelText="Message for approval"
+                  placeholder="Comments about this request for the approver."
                   rows={5}
                 />
               </Box>

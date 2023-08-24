@@ -75,7 +75,7 @@ function TopicOverviewResourcesTabs({
     },
     {
       topicOverviewTabEnum: TopicOverviewTabEnum.DOCUMENTATION,
-      title: "Documentation",
+      title: "Readme",
     },
     {
       topicOverviewTabEnum: TopicOverviewTabEnum.HISTORY,
@@ -90,7 +90,7 @@ function TopicOverviewResourcesTabs({
   const renderTabContent = () => {
     if (isError) {
       return (
-        <Box marginBottom={"l1"} marginTop={"l2"} role="alert">
+        <Box marginBottom={"l1"} marginTop={"l2"}>
           <Alert type="error">
             There was an error trying to load the topic details:{" "}
             {parseErrorMsg(error)}.
@@ -112,7 +112,7 @@ function TopicOverviewResourcesTabs({
 
     if (!topicOverview?.topicExists) {
       return (
-        <Box marginBottom={"l1"} marginTop={"l2"} role="alert">
+        <Box marginBottom={"l1"} marginTop={"l2"}>
           <Alert type="warning">Topic {topicName} does not exist.</Alert>
         </Box>
       );
@@ -137,7 +137,7 @@ function TopicOverviewResourcesTabs({
     );
   };
 
-  const TopicTabs = () => (
+  return (
     <Tabs
       value={currentTab}
       onChange={(resourceTypeId) => navigateToTab(navigate, resourceTypeId)}
@@ -163,8 +163,6 @@ function TopicOverviewResourcesTabs({
       })}
     </Tabs>
   );
-
-  return <TopicTabs />;
 }
 
 export { TopicOverviewResourcesTabs };

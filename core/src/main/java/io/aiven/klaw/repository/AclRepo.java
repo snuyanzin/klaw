@@ -26,15 +26,27 @@ public interface AclRepo extends CrudRepository<Acl, AclID> {
   List<Acl> findAllByTenantId(int tenantId);
 
   @Query(
+      value =
+          "select exists(select 1 from kwacls where teamid != :teamId and tenantid = :tenantId and consumergroup = :consumerGroup)",
+      nativeQuery = true)
+  boolean validateIfConsumerGroupUsedByAnotherTeam(
+      @Param("teamId") Integer teamId,
+      @Param("tenantId") Integer tenantId,
+      @Param("consumerGroup") String consumerGroup);
+
+  boolean existsByEnvironmentAndTenantId(
+      @Param("envId") String envId, @Param("tenantId") Integer tenantId);
+
+  @Query(
       value = "select count(*) from kwacls where env = :envId and tenantid = :tenantId",
       nativeQuery = true)
   List<Object[]> findAllAclsCountForEnv(
       @Param("envId") String envId, @Param("tenantId") Integer tenantId);
 
   @Query(
-      value = "select count(*) from kwacls where teamid = :teamId and tenantid = :tenantId",
+      value = "select exists(select 1 from kwacls where teamid = :teamId and tenantid = :tenantId)",
       nativeQuery = true)
-  List<Object[]> findAllRecordsCountForTeamId(
+  boolean existsRecordsCountForTeamId(
       @Param("teamId") Integer teamId, @Param("tenantId") Integer tenantId);
 
   @Query(
@@ -81,4 +93,6 @@ public interface AclRepo extends CrudRepository<Acl, AclID> {
 
   @Query(value = "select max(aclid) from kwacls where tenantid = :tenantId", nativeQuery = true)
   Integer getNextAclId(@Param("tenantId") Integer tenantId);
+
+  void deleteByTenantId(int tenantId);
 }

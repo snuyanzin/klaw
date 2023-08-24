@@ -28,27 +28,27 @@ public interface TopicRequestsRepo
   boolean existsByTenantIdAndRequestStatusAndRequestOperationTypeAndTopicname(
       int tenantId, String requestStatus, String requestOperationType, String topicname);
 
+  boolean existsByTenantIdAndEnvironmentAndRequestStatus(
+      int tenantId, String environment, String requestStatus);
+
   List<TopicRequest> findAllByRequestStatusAndTopicnameAndEnvironmentAndTenantId(
       String topicStatus, String topicName, String envId, int tenantId);
 
-  @Query(
-      value = "select count(*) from kwtopicrequests where env = :envId and tenantid = :tenantId",
-      nativeQuery = true)
-  List<Object[]> findAllTopicRequestsCountForEnv(
+  boolean existsByEnvironmentAndTenantId(
       @Param("envId") String envId, @Param("tenantId") Integer tenantId);
 
   @Query(
       value =
-          "select count(*) from kwtopicrequests where teamid = :teamId and tenantid = :tenantId and topicstatus='created'",
+          "select exists(select 1 from kwtopicrequests where teamid = :teamId and tenantid = :tenantId and topicstatus='created')",
       nativeQuery = true)
-  List<Object[]> findAllRecordsCountForTeamId(
+  boolean existsRecordsCountForTeamId(
       @Param("teamId") Integer teamId, @Param("tenantId") Integer tenantId);
 
   @Query(
       value =
-          "select count(*) from kwtopicrequests where (requestor = :userId) and tenantid = :tenantId and topicstatus='created'",
+          "select exists(select 1 from kwtopicrequests where (requestor = :userId) and tenantid = :tenantId and topicstatus='created')",
       nativeQuery = true)
-  List<Object[]> findAllRecordsCountForUserId(
+  boolean existsRecordsCountForUserId(
       @Param("userId") String userId, @Param("tenantId") Integer tenantId);
 
   @Query(
@@ -85,12 +85,15 @@ public interface TopicRequestsRepo
   @Query(
       value =
           "select count(*) from kwtopicrequests where tenantid = :tenantId"
-              + " and (teamid = :teamId or approvingteamid = :teamId) and requestor != :requestor "
+              + " and (teamid = :teamId or approvingteamid = :approvingTeamId) and requestor != :requestor "
               + "and topicstatus = :topicStatus  group by topicstatus",
       nativeQuery = true)
   Long countRequestorsTopicRequestsGroupByStatusType(
       @Param("teamId") Integer teamId,
+      @Param("approvingTeamId") String approvingTeamId,
       @Param("tenantId") Integer tenantId,
       @Param("requestor") String requestor,
       @Param("topicStatus") String topicStatus);
+
+  void deleteByTenantId(int tenantId);
 }

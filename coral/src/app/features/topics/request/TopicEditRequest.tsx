@@ -31,7 +31,7 @@ import { Environment } from "src/domain/environment";
 import { getAllEnvironmentsForTopicAndAcl } from "src/domain/environment/environment-api";
 import {
   TopicDetailsPerEnv,
-  editTopic,
+  requestTopicEdit,
   getTopicDetailsPerEnv,
 } from "src/domain/topic";
 import { HTTPError } from "src/services/api";
@@ -99,7 +99,7 @@ function TopicEditRequest() {
     if (
       environmentIsFetched &&
       topicDetailsForEnvIsFetched &&
-      !topicDetailsForEnv?.topicExists
+      (!topicDetailsForEnv?.topicExists || !topicDetailsForEnv?.topicId)
     ) {
       navigate(Routes.TOPICS, { replace: true });
       toast({
@@ -152,7 +152,7 @@ function TopicEditRequest() {
     isLoading: editIsLoading,
     isError: editIsError,
     error: editError,
-  } = useMutation(editTopic, {
+  } = useMutation(requestTopicEdit, {
     onSuccess: () => {
       navigate(-1);
       toast({
@@ -172,7 +172,23 @@ function TopicEditRequest() {
       });
       return;
     }
-    edit(data);
+
+    // @TODO 2: when creating a request to update a topic, we need to set the topicId in the optional
+    // 'otherParams'. We will update the endpoint(s) to be better named and more precise (not having an
+    // important param be optional), that's why we're adding a bit of a messy fix here instead of updating
+    // forms schema etc.
+    if (topicDetailsForEnv?.topicId === undefined) {
+      // this case should never happen, as we redirect user and show an error
+      // if there is no `topicDetailsForEnv` or `topicDetailsForEnv.topicId`,
+      // so we want want to throw an Error here to not hide a bug
+      throw Error("No topicId set!");
+    } else {
+      const requestTopicEditParams = {
+        ...data,
+        topicId: topicDetailsForEnv.topicId,
+      };
+      edit(requestTopicEditParams);
+    }
   };
 
   function cancelRequest() {
@@ -199,7 +215,7 @@ function TopicEditRequest() {
         </Dialog>
       )}
       {editIsError && (
-        <Box marginBottom={"l1"} role="alert">
+        <Box marginBottom={"l1"}>
           <Alert type="error">{parseErrorMsg(editError)}</Alert>
         </Box>
       )}
@@ -283,6 +299,7 @@ function TopicEditRequest() {
             <Textarea<Schema>
               name="remarks"
               labelText="Message for approval"
+              placeholder="Comments about this request for the approver."
               rows={5}
             />
           </Box>

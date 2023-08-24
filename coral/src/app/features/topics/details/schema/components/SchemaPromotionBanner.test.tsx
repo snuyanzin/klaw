@@ -28,6 +28,7 @@ describe("SchemaPromotionBanner", () => {
         topicName={"my-test-topic"}
         setShowSchemaPromotionModal={mockSetShowSchemaPromotionModal}
         hasOpenSchemaRequest={false}
+        hasOpenClaimRequest={false}
       />,
       { browserRouter: true }
     );
@@ -46,6 +47,7 @@ describe("SchemaPromotionBanner", () => {
         topicName={"my-test-topic"}
         setShowSchemaPromotionModal={mockSetShowSchemaPromotionModal}
         hasOpenSchemaRequest={false}
+        hasOpenClaimRequest={false}
       />,
       { browserRouter: true }
     );
@@ -66,6 +68,7 @@ describe("SchemaPromotionBanner", () => {
         topicName={"my-test-topic"}
         setShowSchemaPromotionModal={mockSetShowSchemaPromotionModal}
         hasOpenSchemaRequest={true}
+        hasOpenClaimRequest={false}
       />,
       { browserRouter: true }
     );
@@ -74,13 +77,40 @@ describe("SchemaPromotionBanner", () => {
       name: "Promote",
     });
     const linkSeeRequest = screen.getByRole("link", {
-      name: "See the request",
+      name: "View request",
     });
 
     expect(linkSeeRequest).toBeVisible();
     expect(linkSeeRequest).toHaveAttribute(
       "href",
-      `/requests/schemas?search=my-test-topic&status=CREATED&page=1`
+      `/requests/schemas?search=my-test-topic&requestType=ALL&status=CREATED&page=1`
+    );
+    expect(buttonPromote).not.toBeInTheDocument();
+  });
+
+  it("renders correct banner (see open claim request)", () => {
+    customRender(
+      <SchemaPromotionBanner
+        schemaPromotionDetails={schemaPromotionDetailsBase}
+        topicName={"my-test-topic"}
+        setShowSchemaPromotionModal={mockSetShowSchemaPromotionModal}
+        hasOpenSchemaRequest={true}
+        hasOpenClaimRequest={true}
+      />,
+      { browserRouter: true }
+    );
+
+    const buttonPromote = screen.queryByRole("button", {
+      name: "Promote",
+    });
+    const linkSeeRequest = screen.getByRole("link", {
+      name: "View request",
+    });
+
+    expect(linkSeeRequest).toBeVisible();
+    expect(linkSeeRequest).toHaveAttribute(
+      "href",
+      `/approvals/schemas?search=my-test-topic&requestType=CLAIM&status=CREATED&page=1`
     );
     expect(buttonPromote).not.toBeInTheDocument();
   });
@@ -95,6 +125,7 @@ describe("SchemaPromotionBanner", () => {
         topicName={"my-test-topic"}
         setShowSchemaPromotionModal={mockSetShowSchemaPromotionModal}
         hasOpenSchemaRequest={false}
+        hasOpenClaimRequest={false}
       />,
       { browserRouter: true }
     );
@@ -103,13 +134,13 @@ describe("SchemaPromotionBanner", () => {
       name: "Promote",
     });
     const linkSeeRequest = screen.getByRole("link", {
-      name: "See the request",
+      name: "View request",
     });
 
     expect(linkSeeRequest).toBeVisible();
     expect(linkSeeRequest).toHaveAttribute(
       "href",
-      "/requests/schemas?search=my-test-topic&requestType=CREATE&status=CREATED&page=1"
+      "/requests/schemas?search=my-test-topic&requestType=PROMOTE&status=CREATED&page=1"
     );
     expect(buttonPromote).not.toBeInTheDocument();
   });
@@ -124,6 +155,7 @@ describe("SchemaPromotionBanner", () => {
         topicName={"my-test-topic"}
         setShowSchemaPromotionModal={mockSetShowSchemaPromotionModal}
         hasOpenSchemaRequest={false}
+        hasOpenClaimRequest={false}
       />,
       { browserRouter: true }
     );

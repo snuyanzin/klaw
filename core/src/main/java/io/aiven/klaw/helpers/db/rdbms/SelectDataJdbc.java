@@ -15,6 +15,7 @@ import io.aiven.klaw.repository.*;
 import java.text.SimpleDateFormat;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -24,7 +25,9 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.TreeSet;
+import java.util.function.Supplier;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Example;
@@ -1029,8 +1032,8 @@ public class SelectDataJdbc {
     return registerInfoRepo.findAllByStatus("PENDING");
   }
 
-  public List<RegisterUserInfo> selectAllStagingRegisterUsersInfo(String userId) {
-    return registerInfoRepo.findAllByUsernameAndStatus(userId, "STAGING");
+  public RegisterUserInfo selectFirstStagingRegisterUsersInfo(String userId) {
+    return registerInfoRepo.findFirstByUsernameAndStatus(userId, "STAGING");
   }
 
   public RegisterUserInfo selectRegisterUsersInfo(String username) {
@@ -1042,6 +1045,11 @@ public class SelectDataJdbc {
     return aclRepo.findAllByTenantId(tenantId);
   }
 
+  public boolean validateIfConsumerGroupUsedByAnotherTeam(
+      Integer teamId, int tenantId, String consumerGroup) {
+    return aclRepo.validateIfConsumerGroupUsedByAnotherTeam(teamId, tenantId, consumerGroup);
+  }
+
   public Team selectTeamDetails(Integer teamId, int tenantId) {
     TeamID teamID = new TeamID(teamId, tenantId);
     Optional<Team> teamList = teamRepo.findById(teamID);
@@ -1049,54 +1057,39 @@ public class SelectDataJdbc {
   }
 
   public Team selectTeamDetailsFromName(String teamName, int tenantId) {
-    List<Team> teamList = teamRepo.findAllByTenantIdAndTeamname(tenantId, teamName);
-    if (!teamList.isEmpty()) {
-      return teamList.get(0);
-    } else {
-      return null;
-    }
+    return teamRepo.findFirstByTenantIdAndTeamnameOrderByTenantId(tenantId, teamName);
   }
 
   public List<Map<String, String>> selectActivityLogByTeam(
       Integer teamId, int numberOfDays, int tenantId) {
-    List<Map<String, String>> totalActivityLogCount = new ArrayList<>();
     try {
-      List<Object[]> activityCount = activityLogRepo.findActivityLogForTeamId(teamId, tenantId);
-      if (activityCount.size() > numberOfDays)
-        activityCount = activityCount.subList(0, numberOfDays - 1);
-      Map<String, String> hashMap;
-      for (Object[] actvty : activityCount) {
-        hashMap = new HashMap<>();
-        hashMap.put("dateofactivity", "" + actvty[0]);
-        hashMap.put("activitycount", "" + ((Long) actvty[1]).intValue());
-
-        totalActivityLogCount.add(hashMap);
-      }
+      return gatherActivityList(
+          activityLogRepo.findActivityLogForTeamIdForLastNDays(teamId, tenantId, numberOfDays));
     } catch (Exception e) {
       log.error("Error selectActivityLogForLastDays ", e);
     }
-    return totalActivityLogCount;
+    return Collections.emptyList();
   }
 
   public List<Map<String, String>> selectActivityLogForLastDays(
       int numberOfDays, String[] envIdList, int tenantId) {
-    List<Map<String, String>> totalActivityLogCount = new ArrayList<>();
     try {
-      List<Object[]> activityCount =
-          activityLogRepo.findActivityLogForLastDays(envIdList, tenantId);
-      if (activityCount.size() > numberOfDays) {
-        activityCount = activityCount.subList(0, numberOfDays - 1);
-      }
-      Map<String, String> hashMap;
-      for (Object[] actvty : activityCount) {
-        hashMap = new HashMap<>();
-        hashMap.put("dateofactivity", "" + actvty[0]);
-        hashMap.put("activitycount", "" + ((Long) actvty[1]).intValue());
-
-        totalActivityLogCount.add(hashMap);
-      }
+      return gatherActivityList(
+          activityLogRepo.findActivityLogForLastNDays(envIdList, tenantId, numberOfDays));
     } catch (Exception e) {
       log.error("Error selectActivityLogForLastDays ", e);
+    }
+    return Collections.emptyList();
+  }
+
+  private List<Map<String, String>> gatherActivityList(List<Object[]> activityCount) {
+    final List<Map<String, String>> totalActivityLogCount = new ArrayList<>(activityCount.size());
+    Map<String, String> hashMap;
+    for (Object[] activity : activityCount) {
+      hashMap = new HashMap<>(activity.length);
+      hashMap.put("dateofactivity", "" + activity[0]);
+      hashMap.put("activitycount", "" + ((Long) activity[1]).intValue());
+      totalActivityLogCount.add(hashMap);
     }
     return totalActivityLogCount;
   }
@@ -1380,31 +1373,25 @@ public class SelectDataJdbc {
   }
 
   public String getRegistrationId(String userId) {
-    List<RegisterUserInfo> registerInfoList =
-        registerInfoRepo.findAllByUsernameAndStatus(userId, "STAGING");
-    List<RegisterUserInfo> registerInfoList1 =
-        registerInfoRepo.findAllByUsernameAndStatus(userId, "PENDING");
-    if (registerInfoList.size() > 0) {
-      return registerInfoList.get(0).getRegistrationId();
-    } else if (registerInfoList1.size() > 0) {
-      return "PENDING_ACTIVATION";
-    } else {
-      return null;
+    RegisterUserInfo registerInfoStaging =
+        registerInfoRepo.findFirstByUsernameAndStatus(userId, "STAGING");
+    if (registerInfoStaging != null) {
+      return registerInfoStaging.getRegistrationId();
     }
+    boolean pendingArePresent =
+        registerInfoRepo.existsRegisterUserInfoByUsernameAndStatus(userId, "PENDING");
+    if (pendingArePresent) {
+      return "PENDING_ACTIVATION";
+    }
+    return null;
   }
 
   public RegisterUserInfo getRegistrationDetails(String registrationId, String status) {
-    List<RegisterUserInfo> registerUserInfoList;
     if ("".equals(status)) {
-      registerUserInfoList = registerInfoRepo.findAllByRegistrationId(registrationId);
+      return registerInfoRepo.findFirstByRegistrationId(registrationId);
     } else {
-      registerUserInfoList =
-          registerInfoRepo.findAllByRegistrationIdAndStatus(registrationId, status);
+      return registerInfoRepo.findFirstByRegistrationIdAndStatus(registrationId, status);
     }
-    if (registerUserInfoList.size() == 1) {
-      return registerUserInfoList.get(0);
-    }
-    return null;
   }
 
   public List<Topic> getTopicsforTeam(Integer teamId, int tenantId) {
@@ -1449,114 +1436,88 @@ public class SelectDataJdbc {
     return productDetailsRepo.findById(name);
   }
 
-  public int findAllKafkaComponentsCountForEnv(String env, int tenantId) {
-    return ((Long) topicRepo.findAllTopicsCountForEnv(env, tenantId).get(0)[0]).intValue()
-        + ((Long) topicRequestsRepo.findAllTopicRequestsCountForEnv(env, tenantId).get(0)[0])
-            .intValue()
-        + ((Long) aclRepo.findAllAclsCountForEnv(env, tenantId).get(0)[0]).intValue()
-        + ((Long) aclRequestsRepo.findAllAclRequestsCountForEnv(env, tenantId).get(0)[0])
-            .intValue();
+  public boolean existsKafkaComponentsForEnv(String env, int tenantId) {
+    return Stream.<Supplier<Boolean>>of(
+            () -> topicRepo.existsByEnvironmentAndTenantId(env, tenantId),
+            () ->
+                topicRequestsRepo.existsByTenantIdAndEnvironmentAndRequestStatus(
+                    tenantId, env, RequestStatus.CREATED.value),
+            () -> aclRepo.existsByEnvironmentAndTenantId(env, tenantId),
+            () ->
+                aclRequestsRepo.existsByTenantIdAndEnvironmentAndRequestStatus(
+                    tenantId, env, RequestStatus.CREATED.value))
+        .anyMatch(Supplier::get);
   }
 
-  public int findAllConnectorComponentsCountForEnv(String env, int tenantId) {
-    return ((Long) kafkaConnectorRepo.findAllConnectorCountForEnv(env, tenantId).get(0)[0])
-            .intValue()
-        + ((Long)
-                kafkaConnectorRequestsRepo.findAllConnectorRequestsCountForEnv(env, tenantId)
-                    .get(0)[0])
-            .intValue();
+  public boolean existsConnectorComponentsForEnv(String env, int tenantId) {
+    return Stream.<Supplier<Boolean>>of(
+            () -> kafkaConnectorRepo.existsByEnvironmentAndTenantId(env, tenantId),
+            () ->
+                kafkaConnectorRequestsRepo.existsConnectorRequestsForEnvTenantIdAndCreatedStatus(
+                    env, tenantId))
+        .anyMatch(Supplier::get);
   }
 
-  public int findAllSchemaComponentsCountForEnv(String env, int tenantId) {
-    return ((Long) schemaRequestRepo.findAllSchemaRequestsCountForEnv(env, tenantId).get(0)[0])
-            .intValue()
-        + ((Long) messageSchemaRepo.findAllSchemaCountForEnv(env, tenantId).get(0)[0]).intValue();
+  public boolean existsSchemaComponentsForEnv(String env, int tenantId) {
+    return Stream.<Supplier<Boolean>>of(
+            () -> schemaRequestRepo.existsSchemaRequestByEnvironmentAndTenantId(env, tenantId),
+            () -> messageSchemaRepo.existsMessageSchemaByEnvironmentAndTenantId(env, tenantId))
+        .anyMatch(Supplier::get);
   }
 
-  public int findAllComponentsCountForTeam(Integer teamId, int tenantId) {
-
-    if (log.isDebugEnabled()) {
-      int schemaRequestsRepoCount =
-          ((Long) schemaRequestRepo.findAllRecordsCountForTeamId(teamId, tenantId).get(0)[0])
-              .intValue();
-      int messageSchemaRepoCount =
-          ((Long) messageSchemaRepo.findAllRecordsCountForTeamId(teamId, tenantId).get(0)[0])
-              .intValue();
-      int kafkaConnectorRepoCount =
-          ((Long) kafkaConnectorRepo.findAllRecordsCountForTeamId(teamId, tenantId).get(0)[0])
-              .intValue();
-      int kafkaConnectorRequestsRepoCount =
-          ((Long)
-                  kafkaConnectorRequestsRepo.findAllRecordsCountForTeamId(teamId, tenantId)
-                      .get(0)[0])
-              .intValue();
-      int topicRepoCount =
-          ((Long) topicRepo.findAllRecordsCountForTeamId(teamId, tenantId).get(0)[0]).intValue();
-      int topicRequestsRepoCount =
-          ((Long) topicRequestsRepo.findAllRecordsCountForTeamId(teamId, tenantId).get(0)[0])
-              .intValue();
-      int aclRepoCount =
-          ((Long) aclRepo.findAllRecordsCountForTeamId(teamId, tenantId).get(0)[0]).intValue();
-      int aclRequestRepoCount =
-          ((Long) aclRequestsRepo.findAllRecordsCountForTeamId(teamId, tenantId).get(0)[0])
-              .intValue();
-      log.debug(
-          "For team {} Active Schema Requests {}, number of Schemas in DB {}",
-          teamId,
-          schemaRequestsRepoCount,
-          messageSchemaRepoCount);
-      log.debug(
-          "For team {} Active Connector Requests {}, number of Connector in DB {}",
-          teamId,
-          kafkaConnectorRepoCount,
-          kafkaConnectorRequestsRepoCount);
-      log.debug(
-          "For team {} Active Topic Requests {}, number of Topic in DB {}",
-          teamId,
-          topicRepoCount,
-          topicRequestsRepoCount);
-      log.debug(
-          "For team {} Active ACL Requests {}, number of ACL in DB {}",
-          teamId,
-          aclRepoCount,
-          aclRequestRepoCount);
-      // return here instead of doing a second search
-      return schemaRequestsRepoCount
-          + messageSchemaRepoCount
-          + kafkaConnectorRepoCount
-          + kafkaConnectorRequestsRepoCount
-          + topicRepoCount
-          + topicRequestsRepoCount
-          + aclRepoCount
-          + aclRequestRepoCount;
-    }
-    return ((Long) schemaRequestRepo.findAllRecordsCountForTeamId(teamId, tenantId).get(0)[0])
-            .intValue()
-        + ((Long) messageSchemaRepo.findAllRecordsCountForTeamId(teamId, tenantId).get(0)[0])
-            .intValue()
-        + ((Long) kafkaConnectorRepo.findAllRecordsCountForTeamId(teamId, tenantId).get(0)[0])
-            .intValue()
-        + ((Long)
-                kafkaConnectorRequestsRepo.findAllRecordsCountForTeamId(teamId, tenantId).get(0)[0])
-            .intValue()
-        + ((Long) topicRepo.findAllRecordsCountForTeamId(teamId, tenantId).get(0)[0]).intValue()
-        + ((Long) topicRequestsRepo.findAllRecordsCountForTeamId(teamId, tenantId).get(0)[0])
-            .intValue()
-        + ((Long) aclRepo.findAllRecordsCountForTeamId(teamId, tenantId).get(0)[0]).intValue()
-        + ((Long) aclRequestsRepo.findAllRecordsCountForTeamId(teamId, tenantId).get(0)[0])
-            .intValue();
+  public boolean existsComponentsCountForTeam(Integer teamId, int tenantId) {
+    return Stream.<Supplier<Boolean>>of(
+            () -> {
+              boolean res = schemaRequestRepo.existsRecordsCountForTeamId(teamId, tenantId);
+              log.debug("For team {} Active Schema Requests {}", teamId, res);
+              return res;
+            },
+            () -> {
+              boolean res = messageSchemaRepo.existsRecordsCountForTeamId(teamId, tenantId);
+              log.debug("For team {} number of Schemas in DB {}", teamId, res);
+              return res;
+            },
+            () -> {
+              boolean res = kafkaConnectorRepo.existsRecordsCountForTeamId(teamId, tenantId);
+              log.debug("For team {} Active Connector Requests {}", teamId, res);
+              return res;
+            },
+            () -> {
+              boolean res =
+                  kafkaConnectorRequestsRepo.existsRecordsCountForTeamId(teamId, tenantId);
+              log.debug("For team {} number of Connector in DB {}", teamId, res);
+              return res;
+            },
+            () -> {
+              boolean res = topicRepo.existsRecordsCountForTeamId(teamId, tenantId);
+              log.debug("For team {} Active Topic Requests {}", teamId, res);
+              return res;
+            },
+            () -> {
+              boolean res = topicRequestsRepo.existsRecordsCountForTeamId(teamId, tenantId);
+              log.debug("For team {} number of Topic in DB {}", teamId, res);
+              return res;
+            },
+            () -> {
+              boolean res = aclRepo.existsRecordsCountForTeamId(teamId, tenantId);
+              log.debug("For team {} Active ACL Requests {}", teamId, res);
+              return res;
+            },
+            () -> {
+              boolean res = aclRequestsRepo.existsRecordsCountForTeamId(teamId, tenantId);
+              log.debug("For team {} number of ACL in DB {}", teamId, res);
+              return res;
+            })
+        .anyMatch(Supplier::get);
   }
 
-  public int findAllComponentsCountForUser(String userId, int tenantId) {
-    return ((Long) schemaRequestRepo.findAllRecordsCountForUserId(userId, tenantId).get(0)[0])
-            .intValue()
-        + ((Long)
-                kafkaConnectorRequestsRepo.findAllRecordsCountForUserId(userId, tenantId).get(0)[0])
-            .intValue()
-        + ((Long) topicRequestsRepo.findAllRecordsCountForUserId(userId, tenantId).get(0)[0])
-            .intValue()
-        + ((Long) aclRequestsRepo.findAllRecordsCountForUserId(userId, tenantId).get(0)[0])
-            .intValue();
+  public boolean existsComponentsCountForUser(String userId, int tenantId) {
+    return Stream.<Supplier<Boolean>>of(
+            () -> schemaRequestRepo.existsRecordsCountForUserId(userId, tenantId),
+            () -> kafkaConnectorRequestsRepo.existsRecordsCountForUserId(userId, tenantId),
+            () -> topicRequestsRepo.existsRecordsCountForUserId(userId, tenantId),
+            () -> aclRequestsRepo.existsRecordsCountForUserId(userId, tenantId))
+        .anyMatch(Supplier::get);
   }
 
   public int getAllTopicsCountInAllTenants() {
@@ -1595,9 +1556,10 @@ public class SelectDataJdbc {
       operationTypeCountsMap.put(RequestOperationType.CLAIM.value, assignedToClaimReqs);
       if (RequestMode.MY_APPROVALS == requestMode) {
         // Make sure to remove any requests which the requestor can not approve
+        // Using Integer.toString() as it seems to be the fastest method of changing it.
         Long topicApprovalCount =
             topicRequestsRepo.countRequestorsTopicRequestsGroupByStatusType(
-                teamId, tenantId, requestor, RequestStatus.CREATED.value);
+                teamId, Integer.toString(teamId), tenantId, requestor, RequestStatus.CREATED.value);
 
         statusCountsMap.put(
             RequestStatus.CREATED.value, topicApprovalCount == null ? 0L : topicApprovalCount);
@@ -1737,7 +1699,7 @@ public class SelectDataJdbc {
       // Make sure to remove any requests which the requestor can not approve
       Long connectorApprovalCount =
           kafkaConnectorRequestsRepo.countRequestorsConnectorRequestsGroupByStatusType(
-              teamId, tenantId, requestor, RequestStatus.CREATED.value);
+              teamId, Integer.toString(teamId), tenantId, requestor, RequestStatus.CREATED.value);
 
       statusCountsMap.put(
           RequestStatus.CREATED.value,

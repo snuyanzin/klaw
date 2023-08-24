@@ -10,7 +10,7 @@ import userEvent from "@testing-library/user-event";
 import { TopicDetails } from "src/app/features/topics/details/TopicDetails";
 import { TopicOverview, TopicSchemaOverview } from "src/domain/topic";
 import {
-  claimTopic,
+  requestTopicClaim,
   getSchemaOfTopic,
   getTopicOverview,
 } from "src/domain/topic/topic-api";
@@ -40,7 +40,9 @@ const mockGetTopicOverview = getTopicOverview as jest.MockedFunction<
 const mockGetSchemaOfTopic = getSchemaOfTopic as jest.MockedFunction<
   typeof getSchemaOfTopic
 >;
-const mockClaimTopic = claimTopic as jest.MockedFunction<typeof claimTopic>;
+const mockRequestTopicClaim = requestTopicClaim as jest.MockedFunction<
+  typeof requestTopicClaim
+>;
 
 const testTopicName = "my-nice-topic";
 const testTopicOverview: TopicOverview = {
@@ -48,6 +50,7 @@ const testTopicOverview: TopicOverview = {
   schemaExists: false,
   prefixAclsExists: false,
   txnAclsExists: false,
+  createSchemaAllowed: false,
   topicInfo: {
     topicName: testTopicName,
     noOfPartitions: 1,
@@ -146,6 +149,7 @@ const testTopicSchemas: TopicSchemaOverview = {
   txnAclsExists: false,
   allSchemaVersions: [1],
   latestVersion: 1,
+  createSchemaAllowed: false,
   schemaPromotionDetails: {
     status: "SUCCESS",
     sourceEnv: "3",
@@ -432,7 +436,7 @@ describe("TopicDetails", () => {
 
       const description = await waitFor(() =>
         screen.getByText(
-          "Your team is not the owner of this topic. Click below to create a claim request for this topic."
+          `This topic is currently owned by ${testTopicOverview.topicInfo.teamname}. Select "Claim topic" to request ownership.`
         )
       );
       const button = await waitFor(() =>
@@ -510,7 +514,7 @@ describe("TopicDetails", () => {
 
       await userEvent.click(submitButton);
 
-      expect(mockClaimTopic).toHaveBeenCalledWith({
+      expect(mockRequestTopicClaim).toHaveBeenCalledWith({
         topicName: testTopicOverview.topicInfo.topicName,
         env: testTopicOverview.topicInfo.envId,
       });
@@ -539,7 +543,7 @@ describe("TopicDetails", () => {
       await userEvent.type(textArea, "hello");
       await userEvent.click(submitButton);
 
-      expect(mockClaimTopic).toHaveBeenCalledWith({
+      expect(mockRequestTopicClaim).toHaveBeenCalledWith({
         topicName: testTopicOverview.topicInfo.topicName,
         env: testTopicOverview.topicInfo.envId,
         remark: "hello",
@@ -582,7 +586,7 @@ describe("TopicDetails", () => {
       const mockErrorMessage = "There was an error";
       await waitForElementToBeRemoved(screen.getByPlaceholderText("Loading"));
 
-      mockClaimTopic.mockRejectedValue(mockErrorMessage);
+      mockRequestTopicClaim.mockRejectedValue(mockErrorMessage);
 
       const button = await waitFor(() =>
         screen.getByRole("button", { name: "Claim topic" })

@@ -74,7 +74,7 @@ public class HandleDbRequestsJdbc implements HandleDbRequests {
     return jdbcInsertHelper.insertIntoRequestSchema(schemaRequest);
   }
 
-  public String addToSynctopics(List<Topic> topicRequests) {
+  public CRUDResponse<Topic> addToSynctopics(List<Topic> topicRequests) {
     return jdbcInsertHelper.insertIntoTopicSOT(topicRequests);
   }
 
@@ -309,6 +309,13 @@ public class HandleDbRequestsJdbc implements HandleDbRequests {
   }
 
   @Override
+  public boolean validateIfConsumerGroupUsedByAnotherTeam(
+      Integer teamId, int tenantId, String consumerGroup) {
+    return jdbcSelectHelper.validateIfConsumerGroupUsedByAnotherTeam(
+        teamId, tenantId, consumerGroup);
+  }
+
+  @Override
   public Acl getSyncAclsFromReqNo(int reqNo, int tenantId) {
     return jdbcSelectHelper.selectSyncAclsFromReqNo(reqNo, tenantId);
   }
@@ -517,8 +524,8 @@ public class HandleDbRequestsJdbc implements HandleDbRequests {
   }
 
   @Override
-  public List<RegisterUserInfo> getAllStagingRegisterUsersInfo(String userName) {
-    return jdbcSelectHelper.selectAllStagingRegisterUsersInfo(userName);
+  public RegisterUserInfo getFirstStagingRegisterUsersInfo(String userName) {
+    return jdbcSelectHelper.selectFirstStagingRegisterUsersInfo(userName);
   }
 
   public UserInfo getUsersInfo(String username) {
@@ -749,7 +756,7 @@ public class HandleDbRequestsJdbc implements HandleDbRequests {
   }
 
   @Override
-  public String updateTopicRequest(TopicRequest topicRequest, String approver) {
+  public CRUDResponse<Topic> updateTopicRequest(TopicRequest topicRequest, String approver) {
     return jdbcUpdateHelper.updateTopicRequest(topicRequest, approver);
   }
 
@@ -957,28 +964,28 @@ public class HandleDbRequestsJdbc implements HandleDbRequests {
   }
 
   @Override
-  public int getAllKafkaComponentsCountForEnv(String env, int tenantId) {
-    return jdbcSelectHelper.findAllKafkaComponentsCountForEnv(env, tenantId);
+  public boolean existsKafkaComponentsForEnv(String env, int tenantId) {
+    return jdbcSelectHelper.existsKafkaComponentsForEnv(env, tenantId);
   }
 
   @Override
-  public int getAllConnectorComponentsCountForEnv(String env, int tenantId) {
-    return jdbcSelectHelper.findAllConnectorComponentsCountForEnv(env, tenantId);
+  public boolean existsConnectorComponentsForEnv(String env, int tenantId) {
+    return jdbcSelectHelper.existsConnectorComponentsForEnv(env, tenantId);
   }
 
   @Override
-  public int getAllSchemaComponentsCountForEnv(String env, int tenantId) {
-    return jdbcSelectHelper.findAllSchemaComponentsCountForEnv(env, tenantId);
+  public boolean existsSchemaComponentsForEnv(String env, int tenantId) {
+    return jdbcSelectHelper.existsSchemaComponentsForEnv(env, tenantId);
   }
 
   @Override
-  public int getAllComponentsCountForTeam(Integer teamId, int tenantId) {
-    return jdbcSelectHelper.findAllComponentsCountForTeam(teamId, tenantId);
+  public boolean existsComponentsCountForTeam(Integer teamId, int tenantId) {
+    return jdbcSelectHelper.existsComponentsCountForTeam(teamId, tenantId);
   }
 
   @Override
-  public int getAllComponentsCountForUser(String userId, int tenantId) {
-    return jdbcSelectHelper.findAllComponentsCountForUser(userId, tenantId);
+  public boolean existsComponentsCountForUser(String userId, int tenantId) {
+    return jdbcSelectHelper.existsComponentsCountForUser(userId, tenantId);
   }
 
   @Override
